@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "observability-shared"
+version = "1.0.0"
+description = "Shared utilities for the Observability platform (DB, Redis, cost, serialiser, models)"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "sqlalchemy>=2.0",
+    "asyncpg>=0.29",
+    "redis>=5.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*"]
