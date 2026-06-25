@@ -1753,6 +1753,7 @@ async def rca_summary(
 
     return [dict(row) for row in rows]
  
+ 
 
 
 @router.get("/decision/summary")
@@ -1778,6 +1779,7 @@ async def decision_summary(
     rows = result.mappings().all()
 
     return [dict(row) for row in rows]
+ 
  
 
 
