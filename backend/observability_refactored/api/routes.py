@@ -1636,3 +1636,142 @@ async def dashboard_overview(
         # ── Drift Alerts feed ─────────────────────────────────────
         "drift_alerts": drift_alerts_result.mappings().all(),
     }
+
+
+
+@router.get("/rca/summary")
+async def rca_summary(
+    db: AsyncSession = Depends(get_db)
+):
+
+    query = text("""
+        SELECT *
+        FROM rca_daily_evaluation_summary
+        ORDER BY evaluation_date DESC
+        LIMIT 1
+    """)
+
+    result = await db.execute(query)
+
+    row = result.mappings().first()
+
+    return dict(row) if row else {}
+
+
+
+@router.get("/decision/summary")
+async def decision_summary(
+    db: AsyncSession = Depends(get_db)
+):
+
+    query = text("""
+        SELECT *
+        FROM decision_daily_evaluation_summary
+        ORDER BY evaluation_date DESC
+        LIMIT 1
+    """)
+
+    result = await db.execute(query)
+
+    row = result.mappings().first()
+
+    return dict(row) if row else {}
+
+
+
+@router.get("/comparison/latest")
+async def comparison_latest(
+    db: AsyncSession = Depends(get_db)
+):
+
+    rca_query = text("""
+        SELECT *
+        FROM rca_daily_evaluation_summary
+        ORDER BY evaluation_date DESC
+        LIMIT 1
+    """)
+
+    decision_query = text("""
+        SELECT *
+        FROM decision_daily_evaluation_summary
+        ORDER BY evaluation_date DESC
+        LIMIT 1
+    """)
+
+    rca = (
+        await db.execute(rca_query)
+    ).mappings().first()
+
+    decision = (
+        await db.execute(decision_query)
+    ).mappings().first()
+
+    return {
+        "relevancy": {
+            "rca": rca["relevancy_avg"],
+            "decision": decision["relevancy_avg"]
+        },
+        "safety": {
+            "rca": rca["safety_avg"],
+            "decision": decision["safety_avg"]
+        },
+        "coherence": {
+            "rca": rca["coherence_avg"],
+            "decision": decision["coherence_avg"]
+        },
+        "helpfulness": {
+            "rca": rca["helpfulness_avg"],
+            "decision": decision["helpfulness_avg"]
+        },
+        "toxicity": {
+            "rca": rca["toxicity_avg"],
+            "decision": decision["toxicity_avg"]
+        }
+    }
+
+
+
+@router.get("/rca/weekly")
+async def rca_weekly_average(
+    db: AsyncSession = Depends(get_db)
+):
+    query = text("""
+        SELECT
+            ROUND(AVG(relevancy_avg)::numeric, 4)   AS relevancy_avg,
+            ROUND(AVG(safety_avg)::numeric, 4)      AS safety_avg,
+            ROUND(AVG(coherence_avg)::numeric, 4)   AS coherence_avg,
+            ROUND(AVG(helpfulness_avg)::numeric, 4) AS helpfulness_avg,
+            ROUND(AVG(toxicity_avg)::numeric, 4)    AS toxicity_avg,
+            SUM(total_rca_evaluated)                AS total_rca
+        FROM rca_daily_evaluation_summary
+        WHERE evaluation_date >= CURRENT_DATE - INTERVAL '7 days'
+    """)
+
+    result = await db.execute(query)
+
+    row = result.mappings().first()
+
+    return dict(row) if row else {}
+
+
+@router.get("/decision/weekly")
+async def decision_weekly_average(
+    db: AsyncSession = Depends(get_db)
+):
+    query = text("""
+        SELECT
+            ROUND(AVG(relevancy_avg)::numeric, 4)   AS relevancy_avg,
+            ROUND(AVG(safety_avg)::numeric, 4)      AS safety_avg,
+            ROUND(AVG(coherence_avg)::numeric, 4)   AS coherence_avg,
+            ROUND(AVG(helpfulness_avg)::numeric, 4) AS helpfulness_avg,
+            ROUND(AVG(toxicity_avg)::numeric, 4)    AS toxicity_avg,
+            SUM(total_decision_evaluated)           AS total_decision
+        FROM decision_daily_evaluation_summary
+        WHERE evaluation_date >= CURRENT_DATE - INTERVAL '7 days'
+    """)
+
+    result = await db.execute(query)
+
+    row = result.mappings().first()
+
+    return dict(row) if row else {}
