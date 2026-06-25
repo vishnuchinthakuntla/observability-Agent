@@ -45,6 +45,10 @@ const Sidebar = () => {
             <Eye size={18} className="icon icon-purple" />
             Observations
           </NavLink>
+          <NavLink to="/evaluations" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+            <Eye size={18} className="icon icon-purple" />
+            Evaluations
+          </NavLink>
           <NavLink to="/sessions" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <Clock size={18} className="icon icon-green" />
             Sessions
