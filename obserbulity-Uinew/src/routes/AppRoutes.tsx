@@ -7,6 +7,7 @@ import Sessions from '../components/Sessions/sessions'
 import Generations from '../components/Generations/generations'
 import Prompts from '../components/Prompts/prompts'
 import ToolCalls from '../components/Tool calls/toolcalls'
+import EvaluationPage from '../components/Evaluations/evaluation'
 import Datasets from '../components/Evaluation/datasets'
 import Scores from '../components/Evaluation/scores'
 import Projects from '../components/Config/projects'
@@ -26,6 +27,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/generations" element={<Generations />} />
       <Route path="/prompts" element={<Prompts />} />
       <Route path="/tool-calls" element={<ToolCalls />} />
+      <Route path="/evaluations" element={<EvaluationPage />} />
       <Route path="/datasets" element={<Datasets />} />
       <Route path="/scores" element={<Scores />} />
       <Route path="/projects" element={<Projects />} />

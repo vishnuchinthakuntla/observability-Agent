@@ -1,5 +1,6 @@
 import "../../layout/dashboard.css";
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Zap,
@@ -19,7 +20,51 @@ import {
   LogOut,
 } from "lucide-react";
 
+const decodeJwtPayload = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1]
+    if (!base64Url) return null
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => `%${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join(''),
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return null
+  }
+}
+
 const Sidebar = () => {
+  const [userName, setUserName] = useState('User')
+  const [userRole, setUserRole] = useState('')
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    const payload = decodeJwtPayload(token)
+    if (!payload) return
+
+    const name = payload.username || payload.name || payload.sub || payload.user || 'User'
+    const role = payload.role || payload.roles || payload.user_role || ''
+
+    setUserName(name)
+    if (typeof role === 'string') {
+      setUserRole(role)
+    } else if (Array.isArray(role) && role.length > 0) {
+      setUserRole(role[0])
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken')
+    window.location.href = '/'
+  }
+
   return (
     <nav className="sidebar">
       <div className="logo">
@@ -117,12 +162,12 @@ const Sidebar = () => {
       </div>
 
       <div className="sidebar-footer">
-        <div className="avatar">AK</div>
+        <div className="avatar">{userName.charAt(0).toUpperCase() || 'U'}</div>
         <div className="user-info">
-          <div className="user-name">Arjun Kumar</div>
-          <div className="user-org">acme-prod · admin</div>
+          <div className="user-name">{userName}</div>
+          {userRole && <div className="user-org">{userRole}</div>}
         </div>
-        <button className="logout-btn" title="Logout">
+        <button className="logout-btn" title="Logout" onClick={handleLogout}>
           <LogOut size={18} />
         </button>
       </div>
