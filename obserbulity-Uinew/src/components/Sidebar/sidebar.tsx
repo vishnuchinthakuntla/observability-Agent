@@ -1,6 +1,6 @@
 import "../../layout/dashboard.css";
 import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Zap,
@@ -40,7 +40,7 @@ const decodeJwtPayload = (token: string) => {
 const Sidebar = () => {
   const [userName, setUserName] = useState('User')
   const [userRole, setUserRole] = useState('')
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')

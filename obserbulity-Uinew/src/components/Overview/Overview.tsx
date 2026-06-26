@@ -343,7 +343,7 @@ const Overview: React.FC = () => {
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
                 <Pie data={tokenPieData} dataKey="value" innerRadius={36} outerRadius={72} startAngle={90} endAngle={-270}>
-                  {tokenPieData.map((entry, index) => (
+                  {tokenPieData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
