@@ -2,9 +2,12 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from observability_redis_api.app.api.routes import admin, ingest, traces
 from observability_redis_api.app.core.config import settings
@@ -67,6 +70,26 @@ app.include_router(ingest.router)
 app.include_router(traces.router)
 app.include_router(admin.router)
 app.include_router(custom_router)
+
+
+class CUSTOMStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except (HTTPException, StarletteHTTPException) as ex:
+            if ex.status_code == 404:
+                return await super().get_response("index.html", scope)
+            else:
+                raise ex
+
+
+# Mount the frontend static folder
+static_path = Path(__file__).resolve().parents[2] / "static"
+if static_path.exists():
+    app.mount("/", CUSTOMStaticFiles(directory=str(static_path), html=True), name="static")
+    logger.info(f"Mounted static folder at: {static_path}")
+else:
+    logger.warning(f"Static folder not found at: {static_path}")
 
 
 @app.get("/health")
