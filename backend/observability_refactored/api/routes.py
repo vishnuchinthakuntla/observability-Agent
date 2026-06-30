@@ -2037,3 +2037,453 @@ async def delete_user(
     return {
         "message": "User deleted successfully"
     }
+
+
+
+
+
+#--------------------------------------------------------------------
+
+
+
+
+
+# ===========================================================
+# EVALUATION APIS - DAILY & WEEKLY
+# ===========================================================
+
+
+# ===========================================================
+# 1. DAILY EVALUATION API
+#    GET /api/evaluation/{agent_name}/daily
+#
+#    Returns daily evaluation data for an agent.
+#    Filters by agent_name and optional project_id.
+#    Returns all metrics for each day.
+# ===========================================================
+
+@router.get("/api/evaluation/{agent_name}/daily")
+async def get_agent_daily_evaluation(
+    agent_name: str,
+    project_id: Optional[str] = Query(None, description="Filter by project_id (e.g., GCP, GCP1)"),
+    days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns daily evaluation data for an agent.
+    Used for line graph showing daily trends.
+
+    Example Responses:
+      GET /api/evaluation/rca_agent/daily?days=30
+      GET /api/evaluation/rca_agent/daily?project_id=GCP&days=30
+      GET /api/evaluation/decision_agent/daily?days=7
+    """
+    
+    # Build WHERE clause
+    where_clauses = [
+        "agent_name = :agent_name",
+        "evaluation_date >= CURRENT_DATE - (make_interval(days := :days))"
+    ]
+    params = {
+        "agent_name": agent_name,
+        "days": days
+    }
+    
+    if project_id:
+        where_clauses.append("project_id = :project_id")
+        params["project_id"] = project_id
+    
+    where_sql = " AND ".join(where_clauses)
+    
+    query = text(f"""
+        SELECT
+            agent_name,
+            project_id,
+            evaluation_date,
+            relevancy_avg,
+            safety_avg,
+            coherence_avg,
+            helpfulness_avg,
+            toxicity_avg,
+            overall_score,
+            total_evaluated
+        FROM averages
+        WHERE {where_sql}
+        ORDER BY evaluation_date ASC
+    """)
+    
+    result = await db.execute(query, params)
+    rows = result.mappings().all()
+    
+    # Format response
+    formatted_data = []
+    for row in rows:
+        data = dict(row)
+        # Format date
+        if data.get('evaluation_date'):
+            data['evaluation_date'] = data['evaluation_date'].strftime('%Y-%m-%d')
+        formatted_data.append(data)
+    
+    return {
+        "status": "success",
+        "agent_name": agent_name,
+        "project_id": project_id or "ALL",
+        "days": days,
+        "total_records": len(formatted_data),
+        "data": formatted_data
+    }
+
+
+# ===========================================================
+# 2. WEEKLY EVALUATION API
+#    GET /api/evaluation/{agent_name}/weekly
+#
+#    Returns weekly aggregated evaluation data for an agent.
+#    Groups data by week (Monday-Sunday).
+#    Filters by agent_name and optional project_id.
+#    Returns weekly averages for all metrics.
+# ===========================================================
+
+@router.get("/api/evaluation/{agent_name}/weekly")
+async def get_agent_weekly_evaluation(
+    agent_name: str,
+    project_id: Optional[str] = Query(None, description="Filter by project_id (e.g., GCP, GCP1)"),
+    weeks: int = Query(4, ge=1, le=52, description="Number of weeks to look back"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns weekly aggregated evaluation data for an agent.
+    Groups data by week (Monday-Sunday).
+    Used for bar graph showing weekly performance.
+
+    Example Responses:
+      GET /api/evaluation/rca_agent/weekly?weeks=4
+      GET /api/evaluation/rca_agent/weekly?project_id=GCP&weeks=4
+      GET /api/evaluation/decision_agent/weekly?weeks=8
+    """
+    
+    # Build WHERE clause
+    where_clauses = [
+        "agent_name = :agent_name",
+        "evaluation_date >= CURRENT_DATE - (make_interval(weeks := :weeks))"
+    ]
+    params = {
+        "agent_name": agent_name,
+        "weeks": weeks
+    }
+    
+    if project_id:
+        where_clauses.append("project_id = :project_id")
+        params["project_id"] = project_id
+    
+    where_sql = " AND ".join(where_clauses)
+    
+    query = text(f"""
+        SELECT
+            DATE_TRUNC('week', evaluation_date) AS week_start,
+            DATE_TRUNC('week', evaluation_date) + INTERVAL '6 days' AS week_end,
+            ROUND(AVG(relevancy_avg)::numeric, 4) AS relevancy_avg,
+            ROUND(AVG(safety_avg)::numeric, 4) AS safety_avg,
+            ROUND(AVG(coherence_avg)::numeric, 4) AS coherence_avg,
+            ROUND(AVG(helpfulness_avg)::numeric, 4) AS helpfulness_avg,
+            ROUND(AVG(toxicity_avg)::numeric, 4) AS toxicity_avg,
+            ROUND(AVG(overall_score)::numeric, 4) AS overall_score,
+            SUM(total_evaluated) AS total_evaluated,
+            COUNT(*) AS days_in_week
+        FROM averages
+        WHERE {where_sql}
+        GROUP BY week_start
+        ORDER BY week_start ASC
+    """)
+    
+    result = await db.execute(query, params)
+    rows = result.mappings().all()
+    
+    # Format response
+    formatted_data = []
+    for row in rows:
+        data = dict(row)
+        # Format dates
+        if data.get('week_start'):
+            data['week_start'] = data['week_start'].strftime('%Y-%m-%d')
+        if data.get('week_end'):
+            data['week_end'] = data['week_end'].strftime('%Y-%m-%d')
+        formatted_data.append(data)
+    
+    return {
+        "status": "success",
+        "agent_name": agent_name,
+        "project_id": project_id or "ALL",
+        "weeks": weeks,
+        "total_records": len(formatted_data),
+        "data": formatted_data
+    }
+
+
+# ===========================================================
+# 3. GET ALL AGENTS LATEST (Dashboard Overview)
+#    GET /api/evaluation/latest/all
+# ===========================================================
+
+@router.get("/api/evaluation/latest/all")
+async def get_all_agents_latest_evaluation(
+    project_id: Optional[str] = Query(None, description="Filter by project_id"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the latest evaluation for all agents.
+    Used for dashboard overview cards.
+
+    Example:
+      GET /api/evaluation/latest/all
+      GET /api/evaluation/latest/all?project_id=GCP
+    """
+    
+    # Build WHERE clause
+    where_clauses = []
+    params = {}
+    
+    if project_id:
+        where_clauses.append("project_id = :project_id")
+        params["project_id"] = project_id
+    
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+    
+    query = text(f"""
+        WITH ranked AS (
+            SELECT
+                agent_name,
+                project_id,
+                evaluation_date,
+                relevancy_avg,
+                safety_avg,
+                coherence_avg,
+                helpfulness_avg,
+                toxicity_avg,
+                overall_score,
+                total_evaluated,
+                ROW_NUMBER() OVER (PARTITION BY agent_name, COALESCE(project_id, 'ALL') ORDER BY evaluation_date DESC) as rn
+            FROM averages
+            WHERE {where_sql}
+        )
+        SELECT
+            agent_name,
+            project_id,
+            evaluation_date,
+            relevancy_avg,
+            safety_avg,
+            coherence_avg,
+            helpfulness_avg,
+            toxicity_avg,
+            overall_score,
+            total_evaluated
+        FROM ranked
+        WHERE rn = 1
+        ORDER BY agent_name, project_id
+    """)
+    
+    result = await db.execute(query, params)
+    rows = result.mappings().all()
+    
+    formatted_data = []
+    for row in rows:
+        data = dict(row)
+        if data.get('evaluation_date'):
+            data['evaluation_date'] = data['evaluation_date'].strftime('%Y-%m-%d')
+        formatted_data.append(data)
+    
+    return {
+        "status": "success",
+        "project_id": project_id or "ALL",
+        "total_agents": len(formatted_data),
+        "data": formatted_data
+    }
+
+
+# ===========================================================
+# 4. GET AVAILABLE PROJECTS FOR AGENT (Filter Dropdown)
+#    GET /api/evaluation/{agent_name}/projects
+# ===========================================================
+
+@router.get("/api/evaluation/{agent_name}/projects")
+async def get_agent_projects(
+    agent_name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns all project_ids available for an agent.
+    Used for project filter dropdown.
+
+    Example:
+      GET /api/evaluation/rca_agent/projects
+    """
+    
+    query = text("""
+        SELECT DISTINCT project_id
+        FROM averages
+        WHERE agent_name = :agent_name
+        AND project_id IS NOT NULL
+        ORDER BY project_id
+    """)
+    
+    result = await db.execute(query, {"agent_name": agent_name})
+    rows = result.mappings().all()
+    
+    projects = [row["project_id"] for row in rows if row["project_id"]]
+    
+    return {
+        "status": "success",
+        "agent_name": agent_name,
+        "projects": projects
+    }
+
+
+# ===========================================================
+# 5. GET AGENT LATEST EVALUATION (Single Agent Card)
+#    GET /api/evaluation/{agent_name}/latest
+# ===========================================================
+
+@router.get("/api/evaluation/{agent_name}/latest")
+async def get_agent_latest_evaluation(
+    agent_name: str,
+    project_id: Optional[str] = Query(None, description="Filter by project_id"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the latest evaluation data for a specific agent.
+    Used for dashboard cards showing current scores.
+
+    Example:
+      GET /api/evaluation/rca_agent/latest
+      GET /api/evaluation/rca_agent/latest?project_id=GCP
+    """
+    
+    # Build WHERE clause
+    where_clauses = ["agent_name = :agent_name"]
+    params = {"agent_name": agent_name}
+    
+    if project_id:
+        where_clauses.append("project_id = :project_id")
+        params["project_id"] = project_id
+    
+    where_sql = " AND ".join(where_clauses)
+    
+    query = text(f"""
+        SELECT
+            agent_name,
+            project_id,
+            evaluation_date,
+            relevancy_avg,
+            safety_avg,
+            coherence_avg,
+            helpfulness_avg,
+            toxicity_avg,
+            overall_score,
+            total_evaluated
+        FROM averages
+        WHERE {where_sql}
+        ORDER BY evaluation_date DESC
+        LIMIT 1
+    """)
+    
+    result = await db.execute(query, params)
+    row = result.mappings().first()
+    
+    if not row:
+        return {
+            "status": "success",
+            "agent_name": agent_name,
+            "project_id": project_id or "ALL",
+            "data": None,
+            "message": "No evaluation data found"
+        }
+    
+    data = dict(row)
+    if data.get('evaluation_date'):
+        data['evaluation_date'] = data['evaluation_date'].strftime('%Y-%m-%d')
+    
+    return {
+        "status": "success",
+        "agent_name": agent_name,
+        "project_id": project_id or "ALL",
+        "data": data
+    }
+
+
+# ===========================================================
+# 6. GET AGENT EVALUATION SUMMARY STATS
+#    GET /api/evaluation/{agent_name}/stats
+# ===========================================================
+
+@router.get("/api/evaluation/{agent_name}/stats")
+async def get_agent_evaluation_stats(
+    agent_name: str,
+    project_id: Optional[str] = Query(None, description="Filter by project_id"),
+    days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns summary statistics for an agent.
+    Used for stats cards.
+
+    Example:
+      GET /api/evaluation/rca_agent/stats
+      GET /api/evaluation/rca_agent/stats?project_id=GCP
+    """
+    
+    # Build WHERE clause
+    where_clauses = [
+        "agent_name = :agent_name",
+        "evaluation_date >= CURRENT_DATE - (make_interval(days := :days))"
+    ]
+    params = {
+        "agent_name": agent_name,
+        "days": days
+    }
+    
+    if project_id:
+        where_clauses.append("project_id = :project_id")
+        params["project_id"] = project_id
+    
+    where_sql = " AND ".join(where_clauses)
+    
+    query = text(f"""
+        SELECT
+            COUNT(*) AS total_days,
+            ROUND(AVG(relevancy_avg)::numeric, 4) AS avg_relevancy,
+            ROUND(AVG(safety_avg)::numeric, 4) AS avg_safety,
+            ROUND(AVG(coherence_avg)::numeric, 4) AS avg_coherence,
+            ROUND(AVG(helpfulness_avg)::numeric, 4) AS avg_helpfulness,
+            ROUND(AVG(toxicity_avg)::numeric, 4) AS avg_toxicity,
+            ROUND(AVG(overall_score)::numeric, 4) AS avg_overall,
+            ROUND(MIN(overall_score)::numeric, 4) AS min_overall,
+            ROUND(MAX(overall_score)::numeric, 4) AS max_overall,
+            SUM(total_evaluated) AS total_evaluated,
+            ROUND(AVG(total_evaluated)::numeric, 2) AS avg_daily_evaluated
+        FROM averages
+        WHERE {where_sql}
+    """)
+    
+    result = await db.execute(query, params)
+    row = result.mappings().first()
+    
+    if not row or row["total_days"] == 0:
+        return {
+            "status": "success",
+            "agent_name": agent_name,
+            "project_id": project_id or "ALL",
+            "days": days,
+            "data": None,
+            "message": "No data found"
+        }
+    
+    return {
+        "status": "success",
+        "agent_name": agent_name,
+        "project_id": project_id or "ALL",
+        "days": days,
+        "data": dict(row)
+    }
+
+
+
