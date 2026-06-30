@@ -43,11 +43,13 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), nullable=False, unique=True, index=True)
     email = Column(String(255), nullable=False, unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+    is_admin = Column(Boolean, default=False, nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
