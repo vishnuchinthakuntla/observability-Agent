@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+
+  observability-api:
+    build:
+      context: .
+      dockerfile: observability_redis_api/Dockerfile
+    container_name: observability-api
+
+    ports:
+      - "8001:8001"
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
+
+    depends_on:
+      - redis
+
+    networks:
+      - observability-network
+
+
+  observability-worker:
+    build:
+      context: .
+      dockerfile: observability_redis_worker/Dockerfile
+
+    container_name: observability-worker
+
+    env_file:
+      - .env
+
+    restart: unless-stopped
+
+    depends_on:
+      - redis
+
+    networks:
+      - observability-network
+
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: redis
+
+    ports:
+      - "6379:6379"
+
+    restart: unless-stopped
+
+    networks:
+      - observability-network
+
+
+networks:
+  observability-network:
+    driver: bridge

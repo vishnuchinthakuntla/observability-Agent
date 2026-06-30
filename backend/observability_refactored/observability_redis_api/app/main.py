@@ -13,7 +13,14 @@ from observability_redis_api.app.api.routes import admin, ingest, traces
 from observability_redis_api.app.core.config import settings
 from shared.shared.core.database import db_manager
 from shared.shared.core.redis_client import redis_manager
-from api.routes import router as custom_router
+
+# Domain routers — one file per concern, zero raw SQL
+from api.routers import auth, dashboard, traces as custom_traces, users, evaluation
+from api.database import get_db  # noqa: F401 — imported for dependency injection
+
+# Shared prefix for all custom API routes
+_PREFIX = "/custom-api/v1"
+
 
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -69,7 +76,14 @@ app.add_middleware(
 app.include_router(ingest.router)
 app.include_router(traces.router)
 app.include_router(admin.router)
-app.include_router(custom_router)
+
+# Custom domain routers — all prefixed under /custom-api/v1
+app.include_router(auth.router,           prefix=_PREFIX)
+app.include_router(custom_traces.router,  prefix=_PREFIX)
+app.include_router(dashboard.router,      prefix=_PREFIX)
+app.include_router(users.router,          prefix=_PREFIX)
+app.include_router(evaluation.router,     prefix=_PREFIX)
+
 
 
 class CUSTOMStaticFiles(StaticFiles):
