@@ -174,3 +174,139 @@ class SpanLLMMetadata(Base):
         Index("idx_llm_metadata_created", "created_at"),
         Index("idx_llm_metadata_trace", "trace_id")
     )
+
+
+# ===========================================================
+# NEW MODELS FOR DYNAMIC EVALUATION FRAMEWORK
+# Add these at the end of your models.py file
+# ===========================================================
+
+
+class MetricMaster(Base):
+    """
+    Master table for all evaluation metrics.
+    Stores generic metric definitions that can be reused across agents.
+    """
+    __tablename__ = "metric_master"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    metric_name = Column(String(100), nullable=False, unique=True, index=True)
+    metric_description = Column(Text, nullable=False)
+    default_threshold = Column(Float, nullable=False, default=0.7)
+    category = Column(String(50), nullable=True)
+    
+    active = Column(Boolean, default=True, nullable=False, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_metric_master_name_active", "metric_name", "active"),
+        Index("idx_metric_master_category", "category"),
+    )
+
+
+class EvaluationProfile(Base):
+    """
+    Maps agents to metrics with agent-specific evaluation prompts.
+    Each agent can have different prompts for the same metric.
+    """
+    __tablename__ = "evaluation_profile"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    profile_name = Column(String(100), nullable=False)
+    observation_name = Column(String(100), nullable=False, index=True)
+    metric_id = Column(String(36), ForeignKey("metric_master.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    evaluation_prompt = Column(Text, nullable=False)
+    threshold = Column(Float, nullable=True)
+    
+    active = Column(Boolean, default=True, nullable=False, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_eval_profile_agent", "observation_name"),
+        Index("idx_eval_profile_agent_active", "observation_name", "active"),
+        Index("idx_eval_profile_metric", "metric_id"),
+        Index("idx_eval_profile_unique", "profile_name", "observation_name", "metric_id", unique=True),
+    )
+
+
+class EvaluationResult(Base):
+    """
+    Stores individual evaluation results for each observation.
+    Generic table that works for ALL agents (rca_agent, decision_agent, chatbot_agent, etc.)
+    """
+    __tablename__ = "evaluation_results"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    observation_id = Column(String(36), ForeignKey("observations.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="CASCADE"), nullable=True, index=True)
+    
+    agent_name = Column(String(100), nullable=False, index=True)
+    project_id = Column(String(100), nullable=True, index=True)  # ✅ From traces table
+    
+    metric_name = Column(String(100), nullable=False, index=True)
+    
+    score = Column(Float, nullable=False)
+    reason = Column(Text, nullable=True)
+    threshold = Column(Float, nullable=True)
+    passed = Column(Boolean, nullable=True, index=True)
+    
+    evaluated_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_eval_results_agent", "agent_name"),
+        Index("idx_eval_results_agent_metric", "agent_name", "metric_name"),
+        Index("idx_eval_results_agent_project", "agent_name", "project_id"),
+        Index("idx_eval_results_project", "project_id"),
+        Index("idx_eval_results_evaluated_at", "evaluated_at"),
+        Index("idx_eval_results_observation", "observation_id"),
+        Index("idx_eval_results_passed", "passed"),
+        Index("idx_eval_results_agent_date", "agent_name", "evaluated_at"),
+    )
+
+
+class Averages(Base):
+    """
+    Stores daily aggregated averages for each agent and project.
+    Contains separate columns for each metric average.
+    """
+    __tablename__ = "averages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    agent_name = Column(String(100), nullable=False, index=True)
+    project_id = Column(String(100), nullable=True, index=True)  # ✅ Project ID for filtering
+    evaluation_date = Column(DateTime, nullable=False, index=True)  # ✅ Date type in DB
+    
+    # Individual metric averages as separate columns
+    relevancy_avg = Column(Float, default=0)
+    safety_avg = Column(Float, default=0)
+    coherence_avg = Column(Float, default=0)
+    helpfulness_avg = Column(Float, default=0)
+    toxicity_avg = Column(Float, default=0)
+    
+    # Summary columns
+    total_evaluated = Column(Integer, default=0)
+    passed_count = Column(Integer, default=0)
+    failed_count = Column(Integer, default=0)
+    overall_score = Column(Float, default=0)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_averages_agent", "agent_name"),
+        Index("idx_averages_agent_date", "agent_name", "evaluation_date"),
+        Index("idx_averages_date", "evaluation_date"),
+        Index("idx_averages_project", "project_id"),
+        Index("idx_averages_agent_project", "agent_name", "project_id"),
+        Index("idx_averages_unique", "agent_name", "project_id", "evaluation_date", unique=True),
+    )
