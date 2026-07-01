@@ -27,7 +27,7 @@ class Project(Base):
 
     __tablename__ = "projects"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
@@ -49,7 +49,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     is_admin = Column(Boolean, default=False, nullable=False, index=True)
-    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -59,9 +59,9 @@ class ApiToken(Base):
 
     __tablename__ = "api_tokens"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(Integer, primary_key=True, index=True)
     token_hash = Column(String(64), nullable=False, unique=True, index=True)
-    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     project_name = Column(String(255), nullable=False)
     environment = Column(String(100), nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
@@ -80,8 +80,8 @@ class Trace(Base):
     
     __tablename__ = "traces"
     
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     external_trace_id = Column(String(255), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     user_id = Column(String(255), nullable=True, index=True)
@@ -113,13 +113,13 @@ class Observation(Base):
     
     __tablename__ = "observations"
     
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    trace_id = Column(String(36), ForeignKey("traces.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    trace_id = Column(Integer, ForeignKey("traces.id", ondelete="CASCADE"), nullable=False, index=True)
     
     type = Column(Enum(ObservationType), nullable=False)
     name = Column(String(255), nullable=True)
     
-    parent_observation_id = Column(String(36), nullable=True, index=True)
+    parent_observation_id = Column(Integer, nullable=True, index=True)
     
     input = Column(JSON, nullable=True)
     output = Column(JSON, nullable=True)
@@ -147,11 +147,11 @@ class SpanLLMMetadata(Base):
     
     __tablename__ = "span_llm_metadata"
     
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    observation_id = Column(String(36), ForeignKey("observations.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
-    trace_id = Column(String(36),ForeignKey("traces.id", ondelete="CASCADE"),nullable=False,index=True)
-    
+    id = Column(Integer, primary_key=True, index=True)
+    observation_id = Column(Integer, ForeignKey("observations.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    trace_id = Column(Integer, ForeignKey("traces.id", ondelete="CASCADE"), nullable=False, index=True)
+
     model = Column(String(255), nullable=False)
     provider = Column(String(100), nullable=True)
     

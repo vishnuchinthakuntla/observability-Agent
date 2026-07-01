@@ -110,7 +110,6 @@ class RegisterRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
-    project_id: str
 
 
 # ------------------------------------------------------------------ #
@@ -131,7 +130,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         username=payload.username,
         email=payload.email,
         password_hash=hash_password(payload.password),
-        project_id=payload.project_id,
+        project_id=1  # Assign a default project ID or handle project creation separately,
     )
     db.add(user)
     await db.commit()

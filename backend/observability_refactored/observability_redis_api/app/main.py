@@ -16,7 +16,11 @@ from shared.shared.core.redis_client import redis_manager
 
 # Domain routers — one file per concern, zero raw SQL
 from api.routers import auth, dashboard, traces as custom_traces, users, evaluation
-from api.database import get_db  # noqa: F401 — imported for dependency injection
+from api.database import get_db
+from sqlalchemy import select
+
+from shared.shared.models.telemetry import Project, User
+from api.routers.auth import verify_password, hash_password 
 
 # Shared prefix for all custom API routes
 _PREFIX = "/custom-api/v1"
@@ -27,7 +31,35 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+async def create_default_data():
+    session = await db_manager.get_session_direct()
 
+    try:
+        project = Project(
+            name="Default Project",
+            description="Default project created on startup",
+        )
+        session.add(project)
+        await session.flush()
+
+        user = User(
+            username="admin",
+            email="admin@example.com",
+            password_hash=hash_password("Admin@123"),
+            is_admin=True,
+            project_id=project.id,
+        )
+        session.add(user)
+
+        await session.commit()
+        logger.info("Default project and admin user created successfully")
+
+    except Exception:
+        await session.rollback()
+        raise
+
+    finally:
+        await session.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,6 +74,7 @@ async def lifespan(app: FastAPI):
         echo=settings.DEBUG,
     )
     await db_manager.create_tables()
+    await create_default_data()
     logger.info("Database ready")
 
     await redis_manager.initialize(
