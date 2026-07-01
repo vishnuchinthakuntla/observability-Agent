@@ -1,0 +1,92 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_DIR = "backend/observability_refactored"
+    }
+
+    options {
+        timestamps()
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verify Files') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        pwd
+                        ls -la
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        docker compose build --no-cache
+                    '''
+                }
+            }
+        }
+
+        stage('Stop Existing Containers') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        docker compose down || true
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        docker compose up -d
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    docker ps
+                '''
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh '''
+                    docker image prune -f
+                '''
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo "Deployment Successful!"
+        }
+
+        failure {
+            echo "Deployment Failed!"
+        }
+
+        always {
+            sh 'docker ps -a'
+        }
+    }
+}
