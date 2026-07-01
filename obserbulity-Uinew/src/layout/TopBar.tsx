@@ -11,13 +11,13 @@ const TopBar: React.FC = () => {
       </div>
       <div className="topbar-spacer" />
 
-      <select className="project-select">
+      {/* <select className="project-select">
         <option>acme-production</option>
         <option>acme-staging</option>
         <option>demo-project</option>
-      </select>
+      </select> */}
 
-      <div className="time-filter">
+      {/* <div className="time-filter">
         <button className="time-btn">1h</button>
         <button className="time-btn active">24h</button>
         <button className="time-btn">7d</button>
@@ -31,7 +31,7 @@ const TopBar: React.FC = () => {
       </div>
 
       <button className="topbar-btn">⬇ Export</button>
-      <button className="topbar-btn primary">+ New alert</button>
+      <button className="topbar-btn primary">+ New alert</button> */}
     </div>
   )
 }

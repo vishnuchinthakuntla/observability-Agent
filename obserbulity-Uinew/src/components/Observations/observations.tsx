@@ -43,6 +43,8 @@ const Observations = () => {
   const [status, setStatus] =
     useState("");
 
+  const [dateRange, setDateRange] = useState("");
+
   const [fromTime, setFromTime] =
     useState("");
 
@@ -71,6 +73,9 @@ const Observations = () => {
           agentName
         );
 
+      if (dateRange)
+        params.append("date_range", dateRange);
+
       if (obsType)
         params.append("obs_type", obsType);
 
@@ -89,12 +94,23 @@ const Observations = () => {
       params.append("page", "1");
       params.append("page_size", "100");
 
-      const url = `${apiBase}/custom-api/v1/observations?${params.toString()}`;
+      const url = apiBase ? `${apiBase}/custom-api/v1/observations?${params.toString()}` : `/custom-api/v1/observations?${params.toString()}`;
+
+      console.log("Fetching observations:", url);
 
       const res = await fetch(url);
+      const contentType = res.headers.get("content-type") || "";
+      const bodyText = await res.text();
 
-      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}: ${bodyText.slice(0, 300)}`);
+      }
 
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Expected JSON response but received ${contentType || "unknown"}. Response body: ${bodyText.slice(0, 300)}`);
+      }
+
+      const json = JSON.parse(bodyText);
       setObservations(json.data || []);
     } catch (err) {
       console.error(err);
@@ -203,6 +219,22 @@ const Observations = () => {
           />
 
           <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+          >
+            <option value="">Date Range</option>
+            <option value="5m">5m</option>
+            <option value="30m">30m</option>
+            <option value="1h">1h</option>
+            <option value="3h">3h</option>
+            <option value="1d">1d</option>
+            <option value="7d">7d</option>
+            <option value="30d">30d</option>
+            <option value="90d">90d</option>
+            <option value="1y">1y</option>
+          </select>
+
+          <select
             value={obsType}
             onChange={(e) =>
               setObsType(
@@ -279,6 +311,7 @@ const Observations = () => {
               onClick={() => {
                 setTraceId("");
                 setAgentName("");
+                setDateRange("");
                 setObsType("");
                 setStatus("");
                 setFromTime("");

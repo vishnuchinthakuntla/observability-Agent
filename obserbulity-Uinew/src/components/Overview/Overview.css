@@ -74,3 +74,198 @@ td {
   padding: 12px;
   border-bottom: 1px solid #eee;
 }
+.chart-area {
+  width: 100%;
+  height: 320px;
+  padding: 10px 0;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.recharts-default-tooltip {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.trace-id-link {
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.trace-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 999;
+}
+
+.trace-detail-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.trace-detail-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(460px, 100%);
+  height: 100vh;
+  background: #fff;
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.16);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.trace-detail-drawer.open {
+  transform: translateX(0);
+}
+
+.trace-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.trace-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.trace-detail-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.trace-detail-close {
+  border: none;
+  background: #f3f4f6;
+  color: #334155;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+
+.trace-detail-content {
+  padding: 16px;
+  overflow: auto;
+}
+
+.trace-detail-state {
+  padding: 24px 8px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.trace-detail-state.error {
+  color: #dc2626;
+}
+
+.trace-flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trace-flow-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.trace-flow-node {
+  display: flex;
+  gap: 12px;
+}
+
+.trace-flow-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.trace-flow-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.trace-flow-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.trace-flow-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.trace-flow-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.trace-flow-badge.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.trace-flow-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trace-flow-badge.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trace-flow-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.trace-flow-summary {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #334155;
+}

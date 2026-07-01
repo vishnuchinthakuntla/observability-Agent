@@ -1,4 +1,5 @@
 import "../../layout/dashboard.css";
+import "./Sidebar.css"
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
@@ -19,6 +20,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import covalenseLogo from "../../assets/covalenselogo.jpeg";
 
 const decodeJwtPayload = (token: string) => {
   try {
@@ -67,17 +69,19 @@ const Sidebar = () => {
 
   return (
     <nav className="sidebar">
-      <div className="logo">
-        <div className="logo-mark">SH</div>
-        <div>
-          <div className="logo-text">SystemHealth</div>
-          <div className="logo-sub">Observability Platform</div>
+      <div className="logo-section logo-vertical">
+        <img src={covalenseLogo} alt="Covalense" className="sidebar-logo" />
+        <div className="logo-copy">
+         
         </div>
       </div>
+      
 
       <div className="nav">
         <div className="nav-section">
-          <div className="nav-label">Core</div>
+          {/* <div className="nav-label">Core</div> */}
+           <div className="logo-text">SystemHealth</div>
+          <div className="logo-sub">Observability Platform</div>
           <NavLink to="/overview" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <LayoutDashboard size={18} className="icon icon-blue" />
             Overview

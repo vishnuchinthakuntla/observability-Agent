@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -9,6 +8,9 @@ import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  CartesianGrid,
+  Area,
 } from "recharts";
 
 import "./Overview.css";
@@ -82,6 +84,24 @@ type RecentTraceResponse = {
   data: RecentTrace[];
 };
 
+type TraceFlowStep = {
+  id: string;
+  trace_id: string;
+  type: string;
+  name: string;
+  status: string;
+  latency_ms: number;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  created_at: string;
+  model: string | null;
+  provider: string | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+  cost_usd: number | null;
+};
+
 type TokenDistributionItem = {
   model: string;
   provider: string;
@@ -96,12 +116,45 @@ type TokenDistributionResponse = {
   data: TokenDistributionItem[];
 };
 
+type ModelUsageShareItem = {
+  model: string;
+  provider: string;
+  llm_calls: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  usage_share_pct: number;
+};
+
+type ModelUsageShareResponse = {
+  from_time: string | null;
+  to_time: string | null;
+  data: ModelUsageShareItem[];
+};
+
 const nf = new Intl.NumberFormat("en-US");
 const compactFormatter = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
 
 const formatNumber = (n?: number | null) => (n == null ? "—" : nf.format(n));
 const formatCompact = (n?: number | null) => (n == null ? "—" : compactFormatter.format(n));
 const formatLatency = (ms?: number | null) => (ms == null ? "—" : `${nf.format(ms)} ms`);
+
+const summarizeValue = (value: unknown): string => {
+  if (value == null) return "—";
+  if (typeof value === "string") {
+    return value.length > 140 ? `${value.slice(0, 137)}...` : value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.length ? `${value.length} item${value.length === 1 ? "" : "s"}` : "No items";
+  }
+  if (typeof value === "object") {
+    const keys = Object.keys(value as Record<string, unknown>).slice(0, 4);
+    return keys.length ? `${keys.join(", ")}${Object.keys(value as Record<string, unknown>).length > 4 ? ", …" : ""}` : "Empty object";
+  }
+  return "—";
+};
 
 const deltaNode = (delta: number | null | undefined, opts?: { unit?: string }) => {
   if (delta == null) return <span>—</span>;
@@ -120,23 +173,65 @@ const Overview: React.FC = () => {
   const [traceVolume, setTraceVolume] = useState<TraceVolumeBucket[]>([]);
   const [recentTraces, setRecentTraces] = useState<RecentTrace[]>([]);
   const [tokenDistribution, setTokenDistribution] = useState<TokenDistributionItem[]>([]);
+  const [modelUsageShare, setModelUsageShare] = useState<ModelUsageShareItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [selectedTraceSteps, setSelectedTraceSteps] = useState<TraceFlowStep[]>([]);
+  const [selectedTraceLoading, setSelectedTraceLoading] = useState(false);
+  const [selectedTraceError, setSelectedTraceError] = useState<string | null>(null);
+
+  const apiBase = String(import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
+
+  const openTraceFlow = async (traceId: string) => {
+    setSelectedTraceId(traceId);
+    setSelectedTraceLoading(true);
+    setSelectedTraceError(null);
+    setSelectedTraceSteps([]);
+
+    try {
+      const detailPath = `/custom-api/v1/traces/${encodeURIComponent(traceId)}`;
+      const detailUrl = apiBase ? `${apiBase}${detailPath}` : detailPath;
+      const res = await fetch(detailUrl);
+      const bodyText = await res.text();
+
+      if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}: ${bodyText}`);
+      }
+
+      const parsed = JSON.parse(bodyText);
+      const steps = Array.isArray(parsed) ? parsed : parsed?.data || [];
+      setSelectedTraceSteps(steps as TraceFlowStep[]);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unable to load trace flow.";
+      setSelectedTraceError(message);
+      setSelectedTraceSteps([]);
+    } finally {
+      setSelectedTraceLoading(false);
+    }
+  };
+
+  const closeTraceFlow = () => {
+    setSelectedTraceId(null);
+    setSelectedTraceSteps([]);
+    setSelectedTraceError(null);
+    setSelectedTraceLoading(false);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
 
-    const apiBase = String(import.meta.env.VITE_API_BASE || "").replace(/\/+$/, "");
-
     const metricsPath = "/custom-api/v1/dashboard/overview/metrics";
     const tracePath = "/custom-api/v1/dashboard/overview/trace-volume";
     const recentPath = "/custom-api/v1/dashboard/overview/recent-traces?limit=10";
     const tokenPath = "/custom-api/v1/dashboard/overview/token-distribution";
+    const modelUsagePath = "/custom-api/v1/dashboard/overview/model-usage-share";
     const metricsUrl = apiBase ? `${apiBase}${metricsPath}` : metricsPath;
     const traceUrl = apiBase ? `${apiBase}${tracePath}` : tracePath;
     const recentUrl = apiBase ? `${apiBase}${recentPath}` : recentPath;
     const tokenUrl = apiBase ? `${apiBase}${tokenPath}` : tokenPath;
+    const modelUsageUrl = apiBase ? `${apiBase}${modelUsagePath}` : modelUsagePath;
 
     const fetchJson = async <T,>(url: string): Promise<T> => {
       const res = await fetch(url);
@@ -156,13 +251,15 @@ const Overview: React.FC = () => {
       fetchJson<TraceVolumeResponse>(traceUrl),
       fetchJson<RecentTraceResponse>(recentUrl),
       fetchJson<TokenDistributionResponse>(tokenUrl),
+      fetchJson<ModelUsageShareResponse>(modelUsageUrl),
     ])
-      .then(([metricsJson, traceJson, recentJson, tokenJson]) => {
+      .then(([metricsJson, traceJson, recentJson, tokenJson, modelUsageJson]) => {
         if (!mounted) return;
         setData(metricsJson);
         setTraceVolume(traceJson.data || []);
         setRecentTraces(recentJson.data || []);
         setTokenDistribution(tokenJson.data || []);
+        setModelUsageShare(modelUsageJson.data || []);
         setError(null);
       })
       .catch((err: any) => {
@@ -193,6 +290,15 @@ const Overview: React.FC = () => {
         displayValue: `${item.token_share_pct.toFixed(1)}%`,
       }))
     : fallbackPieData;
+
+  const fallbackModelUsageRows = [
+    { model: "gpt-4o", provider: "openai", llm_calls: 0, total_tokens: 0, total_cost_usd: 0, usage_share_pct: 62 },
+    { model: "claude-3-5-sonnet", provider: "anthropic", llm_calls: 0, total_tokens: 0, total_cost_usd: 0, usage_share_pct: 24 },
+    { model: "gemini-2.0-flash", provider: "gemini", llm_calls: 0, total_tokens: 0, total_cost_usd: 0, usage_share_pct: 10 },
+    { model: "gpt-4o-mini", provider: "openai", llm_calls: 0, total_tokens: 0, total_cost_usd: 0, usage_share_pct: 4 },
+  ];
+
+  const modelUsageRows = modelUsageShare.length ? modelUsageShare : fallbackModelUsageRows;
 
   return (
     <div className="overview">
@@ -242,16 +348,90 @@ const Overview: React.FC = () => {
             <div className="panel-title">Trace Volume · 24h</div>
             <a className="panel-action" href="#">View all →</a>
           </div>
-          <div className="chart-area">
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={chartData.length ? chartData : lineData}>
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="traces" stroke="#2563EB" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+        <div className="chart-area">
+  <ResponsiveContainer width="100%" height={320}>
+    <AreaChart
+      data={chartData.length ? chartData : lineData}
+      margin={{
+        top: 20,
+        right: 25,
+        left: 5,
+        bottom: 5,
+      }}
+    >
+      <defs>
+        <linearGradient id="traceGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#2563EB" stopOpacity={0.35} />
+          <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+        </linearGradient>
+      </defs>
+
+      <CartesianGrid
+        strokeDasharray="4 4"
+        stroke="#E5E7EB"
+        vertical={false}
+      />
+
+      <XAxis
+        dataKey="time"
+        tick={{
+          fill: "#6B7280",
+          fontSize: 12,
+        }}
+        axisLine={false}
+        tickLine={false}
+      />
+
+      <YAxis
+        tick={{
+          fill: "#6B7280",
+          fontSize: 12,
+        }}
+        axisLine={false}
+        tickLine={false}
+      />
+
+      <Tooltip
+        cursor={{
+          stroke: "#2563EB",
+          strokeDasharray: "5 5",
+        }}
+        contentStyle={{
+          borderRadius: "12px",
+          border: "none",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+        }}
+      />
+
+      <Area
+        type="monotone"
+        dataKey="traces"
+        stroke="none"
+        fill="url(#traceGradient)"
+      />
+
+      <Line
+        type="monotone"
+        dataKey="traces"
+        stroke="#2563EB"
+        strokeWidth={3}
+        dot={{
+          r: 4,
+          fill: "#ffffff",
+          stroke: "#2563EB",
+          strokeWidth: 3,
+        }}
+        activeDot={{
+          r: 7,
+          fill: "#2563EB",
+          stroke: "#fff",
+          strokeWidth: 3,
+        }}
+        animationDuration={1200}
+      />
+    </AreaChart>
+  </ResponsiveContainer>
+</div>
         </div>
 
         <div className="panel">
@@ -308,17 +488,20 @@ const Overview: React.FC = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Trace ID</th>
+                 
                   <th>Name</th>
+                   <th>Trace ID</th>
                   <th>Status</th>
                   <th>Latency</th>
                 </tr>
               </thead>
               <tbody>
               {(recentTraces.length ? recentTraces : []).map((trace) => (
-                <tr key={trace.trace_id}>
-                  <td className="trace-id">{trace.trace_id}</td>
+                <tr key={trace.trace_id} onClick={() => openTraceFlow(trace.trace_id)} style={{ cursor: "pointer" }}>
                   <td>{trace.name}</td>
+                  <td className="trace-id trace-id-link" onClick={(event) => { event.stopPropagation(); openTraceFlow(trace.trace_id); }}>
+                    {trace.trace_id}
+                  </td>
                   <td>
                     <span className={`badge ${trace.status === 'success' ? 'ok' : trace.status === 'error' ? 'err' : 'warn'}`}>
                       <span className="badge-dot"></span>
@@ -376,14 +559,76 @@ const Overview: React.FC = () => {
 
           <div className="section-divider">Model Usage Share</div>
           <div className="model-list">
-            <div className="model-row"><div className="model-name">gpt-4o</div><div className="model-bar-wrap"><div className="model-bar" style={{width:'62%', background:'#2563EB'}} /></div><div className="model-pct">62%</div></div>
-            <div className="model-row"><div className="model-name">claude-3-5-sonnet</div><div className="model-bar-wrap"><div className="model-bar" style={{width:'24%', background:'#7C3AED'}} /></div><div className="model-pct">24%</div></div>
-            <div className="model-row"><div className="model-name">gemini-2.0-flash</div><div className="model-bar-wrap"><div className="model-bar" style={{width:'10%', background:'#059669'}} /></div><div className="model-pct">10%</div></div>
-            <div className="model-row"><div className="model-name">gpt-4o-mini</div><div className="model-bar-wrap"><div className="model-bar" style={{width:'4%', background:'#D97706'}} /></div><div className="model-pct">4%</div></div>
+            {modelUsageRows.map((item, index) => {
+              const pct = item.usage_share_pct ?? 0;
+              return (
+                <div className="model-row" key={`${item.model}-${index}`}>
+                  <div className="model-name">{item.model}</div>
+                  <div className="model-bar-wrap">
+                    <div className="model-bar" style={{ width: `${Math.max(pct, 4)}%`, background: COLORS[index % COLORS.length] }} />
+                  </div>
+                  <div className="model-pct">{pct.toFixed(1)}%</div>
+                </div>
+              );
+            })}
           </div>
 
         </div>
       </div>
+
+      <div className={`trace-detail-backdrop ${selectedTraceId ? "open" : ""}`} onClick={closeTraceFlow} />
+      <aside className={`trace-detail-drawer ${selectedTraceId ? "open" : ""}`}>
+        <div className="trace-detail-header">
+          <div>
+            <div className="trace-detail-title">Trace Flow</div>
+            <div className="trace-detail-subtitle">{selectedTraceId || "Select a trace"}</div>
+          </div>
+          <button className="trace-detail-close" onClick={closeTraceFlow} aria-label="Close trace flow">
+            ✕
+          </button>
+        </div>
+
+        <div className="trace-detail-content">
+          {selectedTraceLoading ? (
+            <div className="trace-detail-state">Loading trace flow...</div>
+          ) : selectedTraceError ? (
+            <div className="trace-detail-state error">{selectedTraceError}</div>
+          ) : selectedTraceSteps.length ? (
+            <div className="trace-flow-list">
+              {selectedTraceSteps.map((step, index) => (
+                <div className="trace-flow-item" key={step.id || `${step.trace_id}-${index}`}>
+                  <div className="trace-flow-node">
+                    <div className="trace-flow-index">{index + 1}</div>
+                    <div className="trace-flow-body">
+                      <div className="trace-flow-top">
+                        <div className="trace-flow-name">{step.name}</div>
+                        <span className={`trace-flow-badge ${step.status}`}>{step.status}</span>
+                      </div>
+                      <div className="trace-flow-meta">
+                        {step.type} • {step.latency_ms} ms • {step.created_at ? new Date(step.created_at).toLocaleString() : "—"}
+                      </div>
+                      <div className="trace-flow-summary">
+                        {step.input?.state && typeof step.input.state === "object" ? (
+                          <div>
+                            <strong>Input:</strong> {summarizeValue((step.input as Record<string, unknown>).state)}
+                          </div>
+                        ) : null}
+                        {step.output ? (
+                          <div>
+                            <strong>Output:</strong> {summarizeValue(step.output)}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="trace-detail-state">Select a trace to inspect its flow.</div>
+          )}
+        </div>
+      </aside>
 
     </div>
   );
