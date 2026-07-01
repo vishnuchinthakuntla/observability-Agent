@@ -6,6 +6,7 @@ services:
     build:
       context: .
       dockerfile: observability_redis_api/Dockerfile
+
     container_name: observability-api
 
     ports:
@@ -59,3 +60,7 @@ services:
 networks:
   observability-network:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.250.0/24
