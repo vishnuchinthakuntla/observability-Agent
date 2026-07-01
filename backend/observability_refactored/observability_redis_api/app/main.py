@@ -35,26 +35,35 @@ async def create_default_data():
     session = await db_manager.get_session_direct()
 
     try:
-        project = Project(
-            name="Default Project",
-            description="Default project created on startup",
+        project = await session.scalar(
+            select(Project).where(Project.name == "Default Project")
         )
-        session.add(project)
-        await session.flush()
 
-        user = User(
-            username="admin",
-            email="admin@example.com",
-            password_hash=hash_password("Admin@123"),
-            is_admin=True,
-            project_id=project.id,
+        if project is None:
+            project = Project(
+                name="Default Project",
+                description="Default project created on startup",
+            )
+            session.add(project)
+            await session.flush()
+
+        user = await session.scalar(
+            select(User).where(User.username == "admin")
         )
-        session.add(user)
+
+        if user is None:
+            user = User(
+                username="admin",
+                email="admin@example.com",
+                password_hash=hash_password("Admin@123"),
+                is_admin=True,
+                project_id=project.id,
+            )
+            session.add(user)
 
         await session.commit()
-        logger.info("Default project and admin user created successfully")
 
-    except Exception:
+    except:
         await session.rollback()
         raise
 
