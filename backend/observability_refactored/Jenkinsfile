@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        APP_DIR = "backend/observability_refactored"
-    }
-
     options {
         timestamps()
     }
@@ -19,7 +15,7 @@ pipeline {
 
         stage('Verify Files') {
             steps {
-                dir("${APP_DIR}") {
+                dir('backend/observability_refactored') {
                     sh '''
                         pwd
                         ls -la
@@ -30,7 +26,7 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                dir("${APP_DIR}") {
+                dir('backend/observability_refactored') {
                     sh '''
                         docker compose build --no-cache
                     '''
@@ -40,7 +36,7 @@ pipeline {
 
         stage('Stop Existing Containers') {
             steps {
-                dir("${APP_DIR}") {
+                dir('backend/observability_refactored') {
                     sh '''
                         docker compose down || true
                     '''
@@ -50,7 +46,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                dir("${APP_DIR}") {
+                dir('backend/observability_refactored') {
                     sh '''
                         docker compose up -d
                     '''
@@ -76,13 +72,12 @@ pipeline {
     }
 
     post {
-
         success {
-            echo "Deployment Successful!"
+            echo 'Deployment Successful!'
         }
 
         failure {
-            echo "Deployment Failed!"
+            echo 'Deployment Failed!'
         }
 
         always {
