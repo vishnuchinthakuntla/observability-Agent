@@ -6,7 +6,7 @@ load_dotenv()
 
 #import from .env import DATABASE_URL
 import os
-Database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/observability")
+Database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:Admin%40123%24@10.160.0.6:5432/observability")
 
 engine = create_async_engine(
     Database_url,
