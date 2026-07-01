@@ -81,8 +81,8 @@ const Sidebar = () => {
       <div className="nav">
         <div className="nav-section">
           {/* <div className="nav-label">Core</div> */}
-           <div className="logo-text">SystemHealth</div>
-          <div className="logo-sub">Observability Platform</div>
+           {/* <div className="logo-text">SystemHealth</div>
+          <div className="logo-sub">Observability Platform</div> */}
           <NavLink to="/overview" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <LayoutDashboard size={18} className="icon icon-blue" />
             Overview

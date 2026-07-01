@@ -111,7 +111,7 @@ html, body {
   display: flex; align-items: center; gap: 9px;
   padding: 7px 16px;
   cursor: pointer; transition: all 0.12s;
-  color: var(--txt2); font-size: 12px; font-weight: 500;
+  color: var(--txt2); font-size: 13px; font-weight: 500;
   border-left: 2px solid transparent;
   text-decoration: none;
   margin: 1px 0;
@@ -616,3 +616,46 @@ svg.chart { overflow: visible; }
 .alert.crit { color: #b91c1c }
 .alert.warn { color: #b45309 }
 .alert.info { color: #6b7280 }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-title {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px; /* space between text */
+}
+
+.topbar-main-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.topbar-divider {
+  color: #cbd5e1;
+  font-size: 18px;
+}
+
+.topbar-sub-title {
+  font-size: 16px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
