@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./observations.css";
+import { apiFetch } from '../../utils/apiClient';
 
 interface Observation {
   id: string;
@@ -98,7 +99,7 @@ const Observations = () => {
 
       console.log("Fetching observations:", url);
 
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       const contentType = res.headers.get("content-type") || "";
       const bodyText = await res.text();
 

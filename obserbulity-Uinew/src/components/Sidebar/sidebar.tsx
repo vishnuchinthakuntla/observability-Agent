@@ -2,6 +2,7 @@ import "../../layout/dashboard.css";
 import "./Sidebar.css"
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { getAuthToken, removeAuthToken } from '../../utils/apiClient'
 import {
   LayoutDashboard,
   Zap,
@@ -45,7 +46,7 @@ const Sidebar = () => {
   // const navigate = useNavigate()
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken')
+    const token = getAuthToken()
     if (!token) return
 
     const payload = decodeJwtPayload(token)
@@ -63,7 +64,7 @@ const Sidebar = () => {
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken')
+    removeAuthToken()
     window.location.href = '/'
   }
 

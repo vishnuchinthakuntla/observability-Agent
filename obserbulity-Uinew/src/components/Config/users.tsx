@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./users.css";
+import { apiFetch } from '../../utils/apiClient';
 
 interface User {
   id: string;
@@ -46,7 +47,7 @@ const Users: React.FC = () => {
         import.meta.env.VITE_API_BASE || ""
       ).replace(/\/+$/, "");
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${apiBase}/custom-api/v1/users`
       );
 
@@ -164,7 +165,7 @@ const Users: React.FC = () => {
         import.meta.env.VITE_API_BASE || ""
       ).replace(/\/+$/, "");
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${apiBase}/custom-api/v1/users/${selectedUser.id}`,
         {
           method: "PUT",
@@ -224,7 +225,7 @@ const Users: React.FC = () => {
         import.meta.env.VITE_API_BASE || ""
       ).replace(/\/+$/, "");
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${apiBase}/custom-api/v1/users/${id}`,
         {
           method: "DELETE",

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { setAuthToken, getAuthToken } from '../utils/apiClient'
 import mainImg from '../assets/obserbulity.png'
 import './login.css'
 import Sidebar from '../components/Sidebar/sidebar'
@@ -23,7 +24,7 @@ const Login: React.FC<LoginProps> = () => {
     const canSubmit: boolean = username.trim() !== '' && password.trim() !== '' && (mode === 'login' || email.trim() !== '')
 
     useEffect(() => {
-        const token = localStorage.getItem('authToken')
+        const token = getAuthToken()
         if (token) {
             setIsAuthenticated(true)
         }
@@ -68,7 +69,7 @@ const Login: React.FC<LoginProps> = () => {
             } else {
                 const token = result.token || result.access_token || result.data?.token || ''
                 if (token) {
-                    localStorage.setItem('authToken', token)
+                    setAuthToken(token)
                 }
                 setIsAuthenticated(true)
             }

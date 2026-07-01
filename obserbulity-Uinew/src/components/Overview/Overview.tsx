@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import "./Overview.css";
+import { apiFetch } from '../../utils/apiClient';
 
 const lineData = [
   { time: "00:00", traces: 1000 },
@@ -192,7 +193,7 @@ const Overview: React.FC = () => {
     try {
       const detailPath = `/custom-api/v1/traces/${encodeURIComponent(traceId)}`;
       const detailUrl = apiBase ? `${apiBase}${detailPath}` : detailPath;
-      const res = await fetch(detailUrl);
+      const res = await apiFetch(detailUrl);
       const bodyText = await res.text();
 
       if (!res.ok) {
@@ -234,7 +235,7 @@ const Overview: React.FC = () => {
     const modelUsageUrl = apiBase ? `${apiBase}${modelUsagePath}` : modelUsagePath;
 
     const fetchJson = async <T,>(url: string): Promise<T> => {
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       const contentType = res.headers.get("content-type") || "";
       const bodyText = await res.text();
       if (!res.ok) {

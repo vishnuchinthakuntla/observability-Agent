@@ -15,10 +15,10 @@ export default defineConfig({
   server: {
     proxy: {
       "/custom-api": {
-        target: "http://localhost:8000",
+        target: "https://arrived-attending-chambers-different.trycloudflare.com",
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/custom-api/, ""),
+        rewrite: (path) => path.replace(/^\/custom-api/, "/custom-api"),
       },
     },
   },

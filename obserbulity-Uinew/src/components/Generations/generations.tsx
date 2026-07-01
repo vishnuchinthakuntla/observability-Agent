@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './generations.css'
+import { apiFetch } from '../../utils/apiClient'
 
 interface GenerationRecord {
   id: string
@@ -31,7 +32,7 @@ const Generations: React.FC = () => {
 
       try {
         const url = apiBase ? `${apiBase}/custom-api/v1/llm-spans` : '/custom-api/v1/llm-spans'
-        const response = await fetch(url)
+        const response = await apiFetch(url)
 
         if (!response.ok) {
           throw new Error('Failed to fetch generations')

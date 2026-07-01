@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import './Traces.css'
 import TraceDrawer from './TraceDrawer'
+import { apiFetch } from '../../utils/apiClient'
 
 interface Observation {
   id: string
@@ -48,7 +49,7 @@ const Traces: React.FC = () => {
 
         console.log('Fetching Traces:', tracesUrl)
 
-        const res = await fetch(tracesUrl)
+        const res = await apiFetch(tracesUrl)
 
         const contentType =
           res.headers.get('content-type') || ''

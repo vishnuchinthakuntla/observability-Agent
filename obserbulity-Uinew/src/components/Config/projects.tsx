@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { apiFetch } from '../../utils/apiClient'
 
 type Project = {
   id: string
@@ -26,7 +27,7 @@ const Projects: React.FC = () => {
       console.log('Fetching projects:', url)
       const headers: Record<string, string> = {}
       if (adminKey) headers['x-admin-key'] = adminKey
-      const res = await fetch(url, { headers })
+      const res = await apiFetch(url, { headers })
       const ct = res.headers.get('content-type') || ''
       const body = await res.text()
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${body.slice(0,300)}`)
@@ -57,7 +58,7 @@ const Projects: React.FC = () => {
       const url = apiBase ? `${apiBase}/api/v1/admin/projects/${encodeURIComponent(updated.id)}` : `/api/v1/admin/projects/${encodeURIComponent(updated.id)}`
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (adminKey) headers['x-admin-key'] = adminKey
-      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(updated) })
+      const res = await apiFetch(url, { method: 'PUT', headers, body: JSON.stringify(updated) })
       const text = await res.text()
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${text.slice(0,300)}`)
       closeEdit()
@@ -73,7 +74,7 @@ const Projects: React.FC = () => {
       const url = apiBase ? `${apiBase}/api/v1/admin/projects/${encodeURIComponent(p.id)}` : `/api/v1/admin/projects/${encodeURIComponent(p.id)}`
       const headers: Record<string, string> = {}
       if (adminKey) headers['x-admin-key'] = adminKey
-      const res = await fetch(url, { method: 'DELETE', headers })
+      const res = await apiFetch(url, { method: 'DELETE', headers })
       const text = await res.text()
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${text.slice(0,300)}`)
       fetchProjects()

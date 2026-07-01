@@ -13,6 +13,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import './evaluation.css'
+import { apiFetch } from '../../utils/apiClient'
 
 interface SummaryRecord {
   id: string
@@ -72,42 +73,42 @@ const EvaluationPage: React.FC = () => {
       try {
         const base = apiBase || ''
 
-       const rcaSummaryUrl =
-  `${base}/custom-api/v1/api/evaluation/${encodeURIComponent(agentName)}/daily?project_id=${encodeURIComponent(projectId)}&days=${days}`
+        const rcaSummaryUrl =
+          `${base}/custom-api/v1/api/evaluation/${encodeURIComponent(agentName)}/daily?project_id=${encodeURIComponent(projectId)}&days=${days}`
 
-const rcaWeeklyUrl =
-  `${base}/custom-api/v1/api/evaluation/${encodeURIComponent(agentName)}/weekly?project_id=${encodeURIComponent(projectId)}&weeks=${weeks}`
+        const rcaWeeklyUrl =
+          `${base}/custom-api/v1/api/evaluation/${encodeURIComponent(agentName)}/weekly?project_id=${encodeURIComponent(projectId)}&weeks=${weeks}`
 
-      const fetchJson = async <T,>(url: string): Promise<T> => {
-  const res = await fetch(url);
+        const fetchJson = async <T,>(url: string): Promise<T> => {
+          const res = await apiFetch(url);
 
-  console.log("URL:", url);
-  console.log("Status:", res.status);
-  console.log("Content-Type:", res.headers.get("content-type"));
+          console.log("URL:", url);
+          console.log("Status:", res.status);
+          console.log("Content-Type:", res.headers.get("content-type"));
 
-  const bodyText = await res.text(); // Read the response ONLY ONCE
+          const bodyText = await res.text(); // Read the response ONLY ONCE
 
-  console.log("Response:", bodyText);
+          console.log("Response:", bodyText);
 
-  if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}: ${bodyText.slice(0, 300)}`);
-  }
+          if (!res.ok) {
+            throw new Error(`${res.status} ${res.statusText}: ${bodyText.slice(0, 300)}`);
+          }
 
-  const contentType = res.headers.get("content-type") || "";
+          const contentType = res.headers.get("content-type") || "";
 
-  if (!contentType.includes("application/json")) {
-    throw new Error(
-      `Expected JSON response but received ${contentType}. Response body: ${bodyText.slice(0, 300)}`
-    );
-  }
+          if (!contentType.includes("application/json")) {
+            throw new Error(
+              `Expected JSON response but received ${contentType}. Response body: ${bodyText.slice(0, 300)}`
+            );
+          }
 
-  return JSON.parse(bodyText) as T;
-};
+          return JSON.parse(bodyText) as T;
+        };
 
-          const [rcaJson, rcaWeeklyJson] = await Promise.all([
-            fetchJson<any>(rcaSummaryUrl),
-            fetchJson<any>(rcaWeeklyUrl),
-          ])
+        const [rcaJson, rcaWeeklyJson] = await Promise.all([
+          fetchJson<any>(rcaSummaryUrl),
+          fetchJson<any>(rcaWeeklyUrl),
+        ])
 
         const rcaTotal = Number(rcaJson.total_records ?? (Array.isArray(rcaJson?.data) ? rcaJson.data.length : 0))
         const rcaWeeklyTotal = Number(rcaWeeklyJson.total_records ?? (Array.isArray(rcaWeeklyJson?.data) ? rcaWeeklyJson.data.length : 0))
@@ -273,56 +274,56 @@ const rcaWeeklyUrl =
           </div>
 
           <div className="charts-grid">
-          <div className="chart-panel">
-            <div className="chart-title">Daily Evaluation Trend</div>
-            <ResponsiveContainer width="100%" height={360}>
-              <LineChart data={chartDataRca} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(value) =>
-                    new Date(value).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })
-                  }
-                  interval={0}
-                  allowDuplicatedCategory
-                  tick={{ fill: '#475569', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis domain={[0, 1]} tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip wrapperStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)' }} />
-                <ReferenceLine y={0.5} stroke="#cbd5e1" strokeDasharray="5 5" />
-                <Legend verticalAlign="top" height={28} iconType="circle" />
-                <Line type="monotone" dataKey="relevancy" name="Relevancy" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, stroke: '#2563eb', fill: '#2563eb' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#2563eb', fill: '#fff' }} />
-                <Line type="monotone" dataKey="safety" name="Safety" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, stroke: '#16a34a', fill: '#16a34a' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#16a34a', fill: '#fff' }} />
-                <Line type="monotone" dataKey="coherence" name="Coherence" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, stroke: '#7c3aed', fill: '#7c3aed' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#7c3aed', fill: '#fff' }} />
-                <Line type="monotone" dataKey="helpfulness" name="Helpfulness" stroke="#f97316" strokeWidth={3} dot={{ r: 4, stroke: '#f97316', fill: '#f97316' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#f97316', fill: '#fff' }} />
-                <Line type="monotone" dataKey="toxicity" name="Toxicity" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, stroke: '#ef4444', fill: '#ef4444' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#ef4444', fill: '#fff' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            <div className="chart-panel">
+              <div className="chart-title">Daily Evaluation Trend</div>
+              <ResponsiveContainer width="100%" height={360}>
+                <LineChart data={chartDataRca} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) =>
+                      new Date(value).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    }
+                    interval={0}
+                    allowDuplicatedCategory
+                    tick={{ fill: '#475569', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis domain={[0, 1]} tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip wrapperStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)' }} />
+                  <ReferenceLine y={0.5} stroke="#cbd5e1" strokeDasharray="5 5" />
+                  <Legend verticalAlign="top" height={28} iconType="circle" />
+                  <Line type="monotone" dataKey="relevancy" name="Relevancy" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, stroke: '#2563eb', fill: '#2563eb' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#2563eb', fill: '#fff' }} />
+                  <Line type="monotone" dataKey="safety" name="Safety" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, stroke: '#16a34a', fill: '#16a34a' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#16a34a', fill: '#fff' }} />
+                  <Line type="monotone" dataKey="coherence" name="Coherence" stroke="#7c3aed" strokeWidth={3} dot={{ r: 4, stroke: '#7c3aed', fill: '#7c3aed' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#7c3aed', fill: '#fff' }} />
+                  <Line type="monotone" dataKey="helpfulness" name="Helpfulness" stroke="#f97316" strokeWidth={3} dot={{ r: 4, stroke: '#f97316', fill: '#f97316' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#f97316', fill: '#fff' }} />
+                  <Line type="monotone" dataKey="toxicity" name="Toxicity" stroke="#ef4444" strokeWidth={3} dot={{ r: 4, stroke: '#ef4444', fill: '#ef4444' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#ef4444', fill: '#fff' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
 
-          <div className="chart-panel small">
-            <div className="chart-title">Weekly Evaluation</div>
-            <ResponsiveContainer width="100%" height={360}>
-              <BarChart data={rcaWeeklyData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="week" tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={48} />
-                <YAxis domain={[0, 1]} tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip wrapperStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)' }} />
-                <Legend verticalAlign="top" height={28} iconType="circle" />
-                <Bar dataKey="relevancy" name="Relevancy" fill="#2563eb" radius={[10, 10, 0, 0]} />
-                <Bar dataKey="safety" name="Safety" fill="#16a34a" radius={[10, 10, 0, 0]} />
-                <Bar dataKey="coherence" name="Coherence" fill="#7c3aed" radius={[10, 10, 0, 0]} />
-                <Bar dataKey="helpfulness" name="Helpfulness" fill="#f97316" radius={[10, 10, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="chart-panel small">
+              <div className="chart-title">Weekly Evaluation</div>
+              <ResponsiveContainer width="100%" height={360}>
+                <BarChart data={rcaWeeklyData} margin={{ top: 16, right: 16, left: 0, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="week" tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={48} />
+                  <YAxis domain={[0, 1]} tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip wrapperStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)' }} />
+                  <Legend verticalAlign="top" height={28} iconType="circle" />
+                  <Bar dataKey="relevancy" name="Relevancy" fill="#2563eb" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="safety" name="Safety" fill="#16a34a" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="coherence" name="Coherence" fill="#7c3aed" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="helpfulness" name="Helpfulness" fill="#f97316" radius={[10, 10, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      </>
+        </>
       )}
     </div>
   )
